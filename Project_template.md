@@ -1,11 +1,84 @@
 ## Изучите [README.md](README.md) файл и структуру проекта.
 
 ## Задание 1
+![to-be-container-diagram.png](docs%2Fdiagrams%2Fto-be-container-diagram.png)
+[to-be-container-diagram.puml](docs%2Fdiagrams%2Fto-be-container-diagram.puml)
+### Описание доменов (микросервисов)
 
-1. Спроектируйте to be архитектуру КиноБездны, разделив всю систему на отдельные домены и организовав интеграционное взаимодействие и единую точку вызова сервисов.
-Результат представьте в виде контейнерной диаграммы в нотации С4.
-Добавьте ссылку на файл в этот шаблон
-[ссылка на файл](ссылка)
+| № | Сервис | Порт | Ответственность | База данных |
+|---|--------|------|-----------------|-------------|
+| 1 | **API Gateway (Proxy)** | 8000 | Единая точка входа, маршрутизация, Strangler Fig, Feature Flags | - |
+| 2 | **User Service** | 8082 | Аутентификация JWT, профили, избранное | PostgreSQL (users_db) |
+| 3 | **Movies Service** | 8081 | Метаданные фильмов, жанры, актёры, рейтинги | PostgreSQL (movies_db) |
+| 4 | **Subscription Service** | 8083 | Подписки, тарифы, промокоды | PostgreSQL (subscriptions_db) |
+| 5 | **Payment Service** | 8084 | Платежи, транзакции | PostgreSQL (payments_db) |
+| 6 | **Content Delivery Service** | 8085 | Стриминг видео, CDN, адаптивный битрейт | - |
+| 7 | **Events Service** | 8082 | Event-driven обработка через Kafka | - |
+| 8 | **Notification Service** | 8086 | Email, Push, SMS уведомления | - |
+
+---
+
+### Интеграционное взаимодействие
+
+#### Синхронное (REST/gRPC)
+**API Gateway → Микросервисы:**
+
+- ***GET /api/users → User Service***
+
+- ***GET /api/movies → Movies Service***
+
+- ***GET /api/subscriptions → Subscription Service***
+
+- ***POST /api/payments → Payment Service***
+
+- ***GET /api/stream/{id} → Content Delivery Service***
+
+- ***POST /api/events → Events Service***
+
+**Межсервисные вызовы:**
+- `Subscription Service → User Service` - проверка пользователя
+- `Payment Service → Subscription Service` - обновление подписки
+- `Content Delivery → Movies Service` - получение метаданных
+- `Content Delivery → Subscription Service` - проверка прав доступа
+
+#### Асинхронное (Event-driven через Kafka)
+
+**Kafka Topics:**
+
+| Topic | Producer | Consumers | События |
+|-------|----------|-----------|---------|
+| `user-events` | User Service | Events, Notification | user.registered, user.logged_in |
+| `movie-events` | Movies Service | Events, Recommendation | movie.viewed, movie.rated, movie.added_to_favorites |
+| `payment-events` | Payment Service | Events, Subscription, Notification | payment.success, payment.failed |
+| `subscription-events` | Subscription Service | Events, Notification | subscription.created, subscription.renewed, subscription.expired |
+
+**RabbitMQ (для внешней Recommendation System):**
+- `Movies Service → RabbitMQ → Recommendation System` (отправка данных)
+- `Recommendation System → RabbitMQ → Movies Service` (получение рекомендаций)
+
+
+---
+
+### Стратегия миграции (Strangler Fig)
+
+**Фаза 1 (текущая):** 
+- Movies Service выделен из монолита
+```yaml```
+MOVIES_MIGRATION_PERCENT: 50  # 50% трафика в новый сервис
+
+**Фаза 2:** User Service
+
+- Выделение аутентификации и профилей
+- Миграция данных пользователей
+
+**Фаза 3:** Payment + Subscription Services
+- Критичная функциональность
+- Тщательное тестирование
+
+**Фаза 4:** Content Delivery Service
+
+- Вывод монолита из эксплуатации
+
 
 
 ## Задание 2
