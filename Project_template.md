@@ -132,6 +132,62 @@ MOVIES_MIGRATION_PERCENT: 50  # 50% трафика в новый сервис
 Необходимые тесты для проверки этого API вызываются при запуске npm run test:local из папки tests/postman 
 Приложите скриншот тестов и скриншот состояния топиков Kafka http://localhost:8090 
 
+### Часть 2: Events Service с Kafka — Результаты тестирования
+
+**Протестированные события:**
+
+1. **User Event:**
+   - Timestamp: 2025-11-16T14:50:00Z
+   - Producer: ✅ Опубликовано в `user-events`
+   - Consumer: ✅ Получено из `user-events` через 7 сек
+
+2. **Movie Event:**
+   - Timestamp: 2025-11-16T14:51:11Z
+   - Producer: ✅ Опубликовано в `movie-events`
+   - Consumer: ✅ Получено из `movie-events` через 8 сек
+
+3. **Payment Event:**
+   - Timestamp: 2025-11-16T14:51:55Z
+   - Producer: ✅ Опубликовано в `payment-events`
+   - Consumer: ✅ Получено из `payment-events` через 9 сек
+
+**Логи Events Service:**
+`[Producer] Published event to topic 'user-events': {...} [Consumer] Received event from topic 'user-events': type=user, action=login [Producer] Published event to topic 'movie-events': {...} [Consumer] Received event from topic 'movie-events': type=movie, action=view [Producer] Published event to topic 'payment-events': {...} [Consumer] Received event from topic 'payment-events': type=payment, action=success`
+
+![logs-event-service.jpg](docs%2Ffiles%2Flogs-event-service.jpg)
+
+**Проверка Kafka UI:**
+- ✅ Топики созданы автоматически
+- ✅ Сообщения видны в Kafka UI (http://localhost:8090)
+- ✅ Все 3 топика содержат события
+
+**Скриншоты**
+
+***Docker контейнеры:***
+![docker-compose-ps.jpg](docs%2Ffiles%2Fdocker-compose-ps.jpg)
+
+***Логи Events Service:***
+![logs-event-service.jpg](docs%2Ffiles%2Flogs-event-service.jpg)
+
+***Kafka UI - топики:***
+![Topics.jpg](docs%2Ffiles%2FTopics.jpg)
+
+***Kafka UI - user-events:***
+![user-events.jpg](docs%2Ffiles%2Fuser-events.jpg)
+
+***Kafka UI - movie-events:***
+![movie-events.jpg](docs%2Ffiles%2Fmovie-events.jpg)
+
+***Kafka UI - payment-events:***
+![payment-event.jpg](docs%2Ffiles%2Fpayment-event.jpg)
+
+***Postman тесты:***
+![tests.jpg](docs%2Ffiles%2Ftests.jpg)
+
+
+
+
+
 
 ## Задание 3
 
