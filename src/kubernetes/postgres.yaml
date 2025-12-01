@@ -1,10 +1,22 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: postgres
-  namespace: cinemaabyss
+  namespace: default
 spec:
-  serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
@@ -21,64 +33,29 @@ spec:
         - containerPort: 5432
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            configMapKeyRef:
-              name: cinemaabyss-config
-              key: DB_USER
+          value: "postgres"
         - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: cinemaabyss-secrets
-              key: DB_PASSWORD
+          value: "postgres_password"
         - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: cinemaabyss-config
-              key: DB_NAME
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "1Gi"
-          requests:
-            cpu: "500m"
-            memory: "512Mi"
+          value: "cinemaabyss"
         volumeMounts:
-        - name: postgres-data
+        - name: postgres-storage
           mountPath: /var/lib/postgresql/data
-        - name: postgres-init-scripts
-          mountPath: /docker-entrypoint-initdb.d
-        readinessProbe:
-          exec:
-            command: ["pg_isready", "-U", "postgres"]
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          exec:
-            command: ["pg_isready", "-U", "postgres"]
-          initialDelaySeconds: 30
-          periodSeconds: 20
       volumes:
-      - name: postgres-init-scripts
-        configMap:
-          name: postgres-init-scripts
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: cinemaabyss
+  namespace: default
 spec:
+  type: ClusterIP
   selector:
     app: postgres
   ports:
   - port: 5432
     targetPort: 5432
-  type: ClusterIP
