@@ -18,10 +18,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  MONOLITH_IMAGE_NAME: ${{ github.repository }}/monolith
-  MOVIES_SERVICE_IMAGE_NAME: ${{ github.repository }}/movies-service
-  EVENTS_SERVICE_IMAGE_NAME: ${{ github.repository }}/events-service
-  PROXY_SERVICE_IMAGE_NAME: ${{ github.repository }}/proxy-service
+  MONOLITH_IMAGE_NAME: samoiloff90/architecture-pro-cinemaabyss/monolith
+  MOVIES_SERVICE_IMAGE_NAME: samoiloff90/architecture-pro-cinemaabyss/movies-service
+  EVENTS_SERVICE_IMAGE_NAME: samoiloff90/architecture-pro-cinemaabyss/events-service
+  PROXY_SERVICE_IMAGE_NAME: samoiloff90/architecture-pro-cinemaabyss/proxy-service
 
 jobs:
   build-and-push:
