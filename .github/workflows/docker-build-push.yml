@@ -159,29 +159,47 @@ jobs:
       - name: Verify images exist in registry
         run: |
           echo "Verifying Docker images in GHCR..."
-
-          docker pull ${{ env.REGISTRY }}/${{ env.MONOLITH_IMAGE_NAME }}:${{ github.ref_name }}
-          docker pull ${{ env.REGISTRY }}/${{ env.MOVIES_SERVICE_IMAGE_NAME }}:${{ github.ref_name }}
-          docker pull ${{ env.REGISTRY }}/${{ env.PROXY_SERVICE_IMAGE_NAME }}:${{ github.ref_name }}
-          docker pull ${{ env.REGISTRY }}/${{ env.EVENTS_SERVICE_IMAGE_NAME }}:${{ github.ref_name }}
+          
+          # For pull requests, use the PR number as the tag
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          
+          echo "Using tag: $TAG"
+          
+          docker pull ${{ env.REGISTRY }}/${{ env.MONOLITH_IMAGE_NAME }}:${TAG}
+          docker pull ${{ env.REGISTRY }}/${{ env.MOVIES_SERVICE_IMAGE_NAME }}:${TAG}
+          docker pull ${{ env.REGISTRY }}/${{ env.PROXY_SERVICE_IMAGE_NAME }}:${TAG}
+          docker pull ${{ env.REGISTRY }}/${{ env.EVENTS_SERVICE_IMAGE_NAME }}:${TAG}
 
           echo "✅ All images successfully pulled from GHCR"
 
       - name: Basic smoke test
         run: |
           echo "Running basic container smoke tests..."
+          
+          # Use the same tag as in the previous step
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          
+          echo "Using tag for smoke tests: $TAG"
 
           # Test Monolith
-          docker run --rm ${{ env.REGISTRY }}/${{ env.MONOLITH_IMAGE_NAME }}:${{ github.ref_name }} ./monolith --version || echo "Monolith container OK"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.MONOLITH_IMAGE_NAME }}:${TAG} ./monolith --version || echo "Monolith container OK"
 
           # Test Movies Service
-          docker run --rm ${{ env.REGISTRY }}/${{ env.MOVIES_SERVICE_IMAGE_NAME }}:${{ github.ref_name }} ./movies-service --version || echo "Movies Service container OK"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.MOVIES_SERVICE_IMAGE_NAME }}:${TAG} ./movies-service --version || echo "Movies Service container OK"
 
           # Test Proxy Service
-          docker run --rm ${{ env.REGISTRY }}/${{ env.PROXY_SERVICE_IMAGE_NAME }}:${{ github.ref_name }} ./proxy --version || echo "Proxy Service container OK"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.PROXY_SERVICE_IMAGE_NAME }}:${TAG} ./proxy --version || echo "Proxy Service container OK"
 
           # Test Events Service
-          docker run --rm ${{ env.REGISTRY }}/${{ env.EVENTS_SERVICE_IMAGE_NAME }}:${{ github.ref_name }} ./events --version || echo "Events Service container OK"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.EVENTS_SERVICE_IMAGE_NAME }}:${TAG} ./events --version || echo "Events Service container OK"
 
           echo "✅ All containers passed smoke tests"
 
