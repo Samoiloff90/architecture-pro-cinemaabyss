@@ -31,6 +31,8 @@ spec:
         imagePullPolicy: {{ .Values.eventsService.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.eventsService.service.targetPort }}
+          name: http
+          protocol: TCP
         env:
         - name: PORT
           value: "{{ .Values.eventsService.service.targetPort }}"
@@ -68,7 +70,9 @@ spec:
   selector:
     app: events-service
   ports:
-  - port: {{ .Values.eventsService.service.port }}
+  - name: http
+    port: {{ .Values.eventsService.service.port }}
     targetPort: {{ .Values.eventsService.service.targetPort }}
+    protocol: TCP
   type: {{ .Values.eventsService.service.type }}
 {{- end }}
