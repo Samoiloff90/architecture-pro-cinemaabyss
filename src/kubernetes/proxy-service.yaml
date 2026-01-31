@@ -18,7 +18,7 @@ spec:
         tier: gateway
     spec:
       imagePullSecrets:
-        - name: ghcr-secret
+        - name: dockerconfigjson
       containers:
       - name: proxy-service
         image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/proxy-service:cinema

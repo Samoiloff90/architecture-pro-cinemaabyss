@@ -55,6 +55,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=ref,event=branch
+            type=raw,value=cinema,enable=${{ github.ref == 'refs/heads/cinema' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Monolith Docker image
@@ -79,6 +80,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=ref,event=branch
+            type=raw,value=cinema,enable=${{ github.ref == 'refs/heads/cinema' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Movies Service Docker image
@@ -103,6 +105,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=ref,event=branch
+            type=raw,value=cinema,enable=${{ github.ref == 'refs/heads/cinema' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Proxy Service Docker image
@@ -127,6 +130,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=ref,event=branch
+            type=raw,value=cinema,enable=${{ github.ref == 'refs/heads/cinema' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Events Service Docker image
@@ -142,6 +146,7 @@ jobs:
 
   # ========== API TESTS ==========
   api-tests:
+    needs: build-and-push
     if: |
       (github.event_name == 'push' && 
        (github.ref == 'refs/heads/main' || 
@@ -162,17 +167,13 @@ jobs:
       - name: Verify images exist in registry
         run: |
           echo "Verifying Docker images in GHCR..."
-          
-          # Use branch name as tag
+          # For cinema branch use tag cinema (matches K8s manifests)
           TAG="${{ github.ref_name }}"
-          
           echo "Using tag: $TAG"
-          
           docker pull ${{ env.REGISTRY }}/${{ env.MONOLITH_IMAGE_NAME }}:${TAG}
           docker pull ${{ env.REGISTRY }}/${{ env.MOVIES_SERVICE_IMAGE_NAME }}:${TAG}
           docker pull ${{ env.REGISTRY }}/${{ env.PROXY_SERVICE_IMAGE_NAME }}:${TAG}
           docker pull ${{ env.REGISTRY }}/${{ env.EVENTS_SERVICE_IMAGE_NAME }}:${TAG}
-
           echo "✅ All images successfully pulled from GHCR"
 
       - name: Basic smoke test

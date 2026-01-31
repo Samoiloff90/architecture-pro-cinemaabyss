@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: monolith
-  namespace: default
+  namespace: cinemaabyss
 spec:
   replicas: 2
   selector:
@@ -14,7 +14,7 @@ spec:
         app: monolith
     spec:
       imagePullSecrets:
-      - name: ghcr-secret
+      - name: dockerconfigjson
       containers:
       - name: monolith
         image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/monolith:cinema
@@ -35,7 +35,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: monolith
-  namespace: default
+  namespace: cinemaabyss
 spec:
   type: ClusterIP
   selector:

@@ -18,7 +18,7 @@ spec:
         tier: backend
     spec:
       imagePullSecrets:
-        - name: ghcr-secret
+        - name: dockerconfigjson
       containers:
       - name: events-service
         image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/events-service:cinema

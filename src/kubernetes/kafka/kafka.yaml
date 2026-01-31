@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: zookeeper
-  namespace: default
+  namespace: cinemaabyss
 spec:
   replicas: 1
   selector:
@@ -24,7 +24,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: zookeeper
-  namespace: default
+  namespace: cinemaabyss
 spec:
   type: ClusterIP
   selector:
@@ -38,7 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka
-  namespace: default
+  namespace: cinemaabyss
 spec:
   replicas: 1
   selector:
@@ -63,13 +63,15 @@ spec:
           value: "zookeeper:2181"
         - name: KAFKA_CREATE_TOPICS
           value: "movie-events:1:1,user-events:1:1,payment-events:1:1"
+        - name: KAFKA_PORT
+          value: "9092"
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: kafka
-  namespace: default
+  namespace: cinemaabyss
 spec:
   type: ClusterIP
   selector:
