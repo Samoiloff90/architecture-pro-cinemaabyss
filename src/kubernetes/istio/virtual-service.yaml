@@ -1,0 +1,38 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: cinemaabyss-routing
+  namespace: cinemaabyss
+spec:
+  hosts:
+  - "cinemaabyss.example.com"
+  gateways:
+  - cinemaabyss-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/events
+    route:
+    - destination:
+        host: events-service.cinemaabyss.svc.cluster.local
+        port:
+          number: 8082
+        subset: v1
+      weight: 100
+
+  - match:
+    - uri:
+        prefix: /api/movies
+    route:
+    - destination:
+        host: proxy-service.cinemaabyss.svc.cluster.local
+        port:
+          number: 8000
+      weight: 100
+
+  - route:
+    - destination:
+        host: proxy-service.cinemaabyss.svc.cluster.local
+        port:
+          number: 8000
+      weight: 100

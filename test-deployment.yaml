@@ -1,0 +1,121 @@
+# PostgreSQL (упрощенная версия)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: cinemaabyss
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: cinemaabyss
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres_password"
+        - name: POSTGRES_DB
+          value: "cinemaabyss"
+
+---
+# Monolith
+apiVersion: v1
+kind: Service
+metadata:
+  name: monolith
+  namespace: cinemaabyss
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: monolith
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monolith
+  namespace: cinemaabyss
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monolith
+  template:
+    metadata:
+      labels:
+        app: monolith
+        version: v1
+    spec:
+      containers:
+      - name: monolith
+        image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/monolith:cinema
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: DB_CONNECTION_STRING
+          value: "postgres://postgres:postgres_password@postgres:5432/cinemaabyss?sslmode=disable"
+
+---
+# Movies Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies-service
+  namespace: cinemaabyss
+spec:
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: movies-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movies-service
+  namespace: cinemaabyss
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: movies-service
+  template:
+    metadata:
+      labels:
+        app: movies-service
+        version: v1
+    spec:
+      containers:
+      - name: movies-service
+        image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/movies-service:cinema
+        ports:
+        - containerPort: 8081
+        env:
+        - name: PORT
+          value: "8081"
+        - name: DB_CONNECTION_STRING
+          value: "postgres://postgres:postgres_password@postgres:5432/cinemaabyss?sslmode=disable"

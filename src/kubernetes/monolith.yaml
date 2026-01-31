@@ -3,26 +3,21 @@ kind: Deployment
 metadata:
   name: monolith
   namespace: cinemaabyss
-  labels:
-    app: monolith
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: monolith
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: monolith
     spec:
+      imagePullSecrets:
+      - name: dockerconfigjson
       containers:
       - name: monolith
-        image:  ghcr.io/db-exp/cinemaabysstest/monolith:latest
+        image: ghcr.io/samoiloff90/architecture-pro-cinemaabyss/monolith:cinema
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -30,34 +25,11 @@ spec:
         - name: PORT
           value: "8080"
         - name: DB_CONNECTION_STRING
-          value: "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
-        envFrom:
-        - configMapRef:
-            name: cinemaabyss-config
-        - secretRef:
-            name: cinemaabyss-secrets
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-        readinessProbe:
-          httpGet:
-            path: /api/users
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /api/users
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 20
-      restartPolicy: Always
-      imagePullSecrets:
-        - name: dockerconfigjson
+          valueFrom:
+            configMapKeyRef:
+              name: cinemaabyss-config
+              key: DB_CONNECTION_STRING
+
 ---
 apiVersion: v1
 kind: Service
@@ -65,9 +37,9 @@ metadata:
   name: monolith
   namespace: cinemaabyss
 spec:
+  type: ClusterIP
   selector:
     app: monolith
   ports:
   - port: 8080
     targetPort: 8080
-  type: ClusterIP

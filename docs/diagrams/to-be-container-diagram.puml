@@ -1,0 +1,82 @@
+@startuml CinemaAbyss_TO-BE_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_LEFT_RIGHT()
+
+title Container Diagram - TO-BE архитектура "Кинобездна"
+
+Person(user, "Пользователь", "Просматривает фильмы через:\nноутбуки, смарт ТВ, мобильные устройства")
+
+System_Boundary(cinemaabyss, "Система CinemaAbyss") {
+
+    Container(proxy, "API Gateway", "Go/Nginx:8000", "Единая точка входа, маршрутизация запросов, Strangler Fig Pattern, Feature Flags")
+
+    Container(user_svc, "User Service", "Go:8082", "Управление пользователями, аутентификация JWT, профили, избранное")
+    ContainerDb(user_db, "User Database", "PostgreSQL", "Пользователи, сессии, избранное")
+
+    Container(movies_svc, "Movies Service", "Go:8081", "Метаданные фильмов, жанры, актёры, рейтинги, отзывы")
+    ContainerDb(movies_db, "Movies Database", "PostgreSQL", "Фильмы, жанры, актёры, рейтинги")
+
+    Container(subscription_svc, "Subscription Service", "Go:8083", "Управление подписками, тарифами, промокодами, скидками")
+    ContainerDb(subscription_db, "Subscription DB", "PostgreSQL", "Подписки, тарифы, промокоды")
+
+    Container(payment_svc, "Payment Service", "Go:8084", "Обработка платежей, транзакции, история")
+    ContainerDb(payment_db, "Payment Database", "PostgreSQL", "Платежи, транзакции")
+
+    Container(content_svc, "Content Delivery Service", "Go:8085", "Потоковая передача видео, адаптивный битрейт для разных устройств")
+
+    Container(events_svc, "Events Service", "Go/Node.js:8082", "Event-driven обработка: просмотры, оценки, покупки")
+
+    Container(notification_svc, "Notification Service", "Go:8086", "Отправка уведомлений: email, push, SMS")
+}
+
+ContainerQueue(kafka, "Apache Kafka", "Event Bus", "Шина событий для асинхронной коммуникации между сервисами")
+ContainerQueue(zookeeper, "ZooKeeper", "Coordination", "Координация Kafka кластера")
+ContainerQueue(rabbitmq, "RabbitMQ", "Message Broker", "Очередь для интеграции с внешними системами")
+
+System_Ext(recommendation, "Recommendation System", "Внешняя ML-система персональных рекомендаций")
+System_Ext(payment_gateway, "Payment Gateway", "Внешняя платёжная система (Stripe/PayPal/ЮKassa)")
+System_Ext(content_providers, "Content Providers", "Онлайн-кинотеатры, источники контента")
+SystemDb_Ext(s3, "S3/CDN", "Объектное хранилище видеофайлов, CDN для доставки контента")
+
+Rel(user, proxy, "Использует", "HTTPS/REST")
+
+Rel(proxy, user_svc, "Маршрутизирует", "REST/gRPC")
+Rel(proxy, movies_svc, "Маршрутизирует", "REST/gRPC")
+Rel(proxy, subscription_svc, "Маршрутизирует", "REST/gRPC")
+Rel(proxy, payment_svc, "Маршрутизирует", "REST/gRPC")
+Rel(proxy, content_svc, "Маршрутизирует", "REST/gRPC")
+
+Rel(user_svc, user_db, "Читает/пишет", "SQL/TCP")
+Rel(movies_svc, movies_db, "Читает/пишет", "SQL/TCP")
+Rel(subscription_svc, subscription_db, "Читает/пишет", "SQL/TCP")
+Rel(payment_svc, payment_db, "Читает/пишет", "SQL/TCP")
+
+Rel(user_svc, kafka, "Публикует:\nuser.registered,\nuser.logged_in", "Kafka Protocol")
+Rel(movies_svc, kafka, "Публикует:\nmovie.viewed,\nmovie.rated", "Kafka Protocol")
+Rel(payment_svc, kafka, "Публикует:\npayment.success,\npayment.failed", "Kafka Protocol")
+Rel(subscription_svc, kafka, "Публикует:\nsubscription.created,\nsubscription.renewed", "Kafka Protocol")
+
+Rel(events_svc, kafka, "Потребляет все события", "Kafka Protocol")
+Rel(notification_svc, kafka, "Потребляет события", "Kafka Protocol")
+
+Rel(content_svc, s3, "Читает видео", "HTTPS/S3 API")
+Rel(content_svc, content_providers, "Получает контент", "HTTPS/REST")
+Rel(payment_svc, payment_gateway, "Обрабатывает платежи", "HTTPS/REST")
+
+Rel(movies_svc, rabbitmq, "Отправляет данные", "AMQP")
+Rel(rabbitmq, recommendation, "Передаёт", "AMQP")
+Rel(recommendation, rabbitmq, "Рекомендации", "AMQP")
+Rel(rabbitmq, movies_svc, "Получает", "AMQP")
+
+Rel(subscription_svc, user_svc, "Проверяет пользователя", "REST")
+Rel(payment_svc, subscription_svc, "Обновляет подписку", "REST")
+Rel(content_svc, movies_svc, "Получает метаданные", "REST")
+Rel(content_svc, subscription_svc, "Проверяет права", "REST")
+
+Rel(kafka, zookeeper, "Координация", "ZK Protocol")
+
+SHOW_LEGEND()
+
+@enduml

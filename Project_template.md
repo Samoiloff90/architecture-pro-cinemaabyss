@@ -1,11 +1,84 @@
 ## Изучите [README.md](README.md) файл и структуру проекта.
 
 ## Задание 1
+![to-be-container-diagram.png](docs%2Fdiagrams%2Fto-be-container-diagram.png)
+[to-be-container-diagram.puml](docs%2Fdiagrams%2Fto-be-container-diagram.puml)
+### Описание доменов (микросервисов)
 
-1. Спроектируйте to be архитектуру КиноБездны, разделив всю систему на отдельные домены и организовав интеграционное взаимодействие и единую точку вызова сервисов.
-Результат представьте в виде контейнерной диаграммы в нотации С4.
-Добавьте ссылку на файл в этот шаблон
-[ссылка на файл](ссылка)
+| № | Сервис | Порт | Ответственность | База данных |
+|---|--------|------|-----------------|-------------|
+| 1 | **API Gateway (Proxy)** | 8000 | Единая точка входа, маршрутизация, Strangler Fig, Feature Flags | - |
+| 2 | **User Service** | 8082 | Аутентификация JWT, профили, избранное | PostgreSQL (users_db) |
+| 3 | **Movies Service** | 8081 | Метаданные фильмов, жанры, актёры, рейтинги | PostgreSQL (movies_db) |
+| 4 | **Subscription Service** | 8083 | Подписки, тарифы, промокоды | PostgreSQL (subscriptions_db) |
+| 5 | **Payment Service** | 8084 | Платежи, транзакции | PostgreSQL (payments_db) |
+| 6 | **Content Delivery Service** | 8085 | Стриминг видео, CDN, адаптивный битрейт | - |
+| 7 | **Events Service** | 8082 | Event-driven обработка через Kafka | - |
+| 8 | **Notification Service** | 8086 | Email, Push, SMS уведомления | - |
+
+---
+
+### Интеграционное взаимодействие
+
+#### Синхронное (REST/gRPC)
+**API Gateway → Микросервисы:**
+
+- ***GET /api/users → User Service***
+
+- ***GET /api/movies → Movies Service***
+
+- ***GET /api/subscriptions → Subscription Service***
+
+- ***POST /api/payments → Payment Service***
+
+- ***GET /api/stream/{id} → Content Delivery Service***
+
+- ***POST /api/events → Events Service***
+
+**Межсервисные вызовы:**
+- `Subscription Service → User Service` - проверка пользователя
+- `Payment Service → Subscription Service` - обновление подписки
+- `Content Delivery → Movies Service` - получение метаданных
+- `Content Delivery → Subscription Service` - проверка прав доступа
+
+#### Асинхронное (Event-driven через Kafka)
+
+**Kafka Topics:**
+
+| Topic | Producer | Consumers | События |
+|-------|----------|-----------|---------|
+| `user-events` | User Service | Events, Notification | user.registered, user.logged_in |
+| `movie-events` | Movies Service | Events, Recommendation | movie.viewed, movie.rated, movie.added_to_favorites |
+| `payment-events` | Payment Service | Events, Subscription, Notification | payment.success, payment.failed |
+| `subscription-events` | Subscription Service | Events, Notification | subscription.created, subscription.renewed, subscription.expired |
+
+**RabbitMQ (для внешней Recommendation System):**
+- `Movies Service → RabbitMQ → Recommendation System` (отправка данных)
+- `Recommendation System → RabbitMQ → Movies Service` (получение рекомендаций)
+
+
+---
+
+### Стратегия миграции (Strangler Fig)
+
+**Фаза 1 (текущая):** 
+- Movies Service выделен из монолита
+```yaml```
+MOVIES_MIGRATION_PERCENT: 50  # 50% трафика в новый сервис
+
+**Фаза 2:** User Service
+
+- Выделение аутентификации и профилей
+- Миграция данных пользователей
+
+**Фаза 3:** Payment + Subscription Services
+- Критичная функциональность
+- Тщательное тестирование
+
+**Фаза 4:** Content Delivery Service
+
+- Вывод монолита из эксплуатации
+
 
 
 ## Задание 2
@@ -58,6 +131,62 @@
 
 Необходимые тесты для проверки этого API вызываются при запуске npm run test:local из папки tests/postman 
 Приложите скриншот тестов и скриншот состояния топиков Kafka http://localhost:8090 
+
+### Часть 2: Events Service с Kafka — Результаты тестирования
+
+**Протестированные события:**
+
+1. **User Event:**
+   - Timestamp: 2025-11-16T14:50:00Z
+   - Producer: ✅ Опубликовано в `user-events`
+   - Consumer: ✅ Получено из `user-events` через 7 сек
+
+2. **Movie Event:**
+   - Timestamp: 2025-11-16T14:51:11Z
+   - Producer: ✅ Опубликовано в `movie-events`
+   - Consumer: ✅ Получено из `movie-events` через 8 сек
+
+3. **Payment Event:**
+   - Timestamp: 2025-11-16T14:51:55Z
+   - Producer: ✅ Опубликовано в `payment-events`
+   - Consumer: ✅ Получено из `payment-events` через 9 сек
+
+**Логи Events Service:**
+`[Producer] Published event to topic 'user-events': {...} [Consumer] Received event from topic 'user-events': type=user, action=login [Producer] Published event to topic 'movie-events': {...} [Consumer] Received event from topic 'movie-events': type=movie, action=view [Producer] Published event to topic 'payment-events': {...} [Consumer] Received event from topic 'payment-events': type=payment, action=success`
+
+![logs-event-service.jpg](docs%2Ffiles%2Flogs-event-service.jpg)
+
+**Проверка Kafka UI:**
+- ✅ Топики созданы автоматически
+- ✅ Сообщения видны в Kafka UI (http://localhost:8090)
+- ✅ Все 3 топика содержат события
+
+**Скриншоты**
+
+***Docker контейнеры:***
+![docker-compose-ps.jpg](docs%2Ffiles%2Fdocker-compose-ps.jpg)
+
+***Логи Events Service:***
+![logs-event-service.jpg](docs%2Ffiles%2Flogs-event-service.jpg)
+
+***Kafka UI - топики:***
+![Topics.jpg](docs%2Ffiles%2FTopics.jpg)
+
+***Kafka UI - user-events:***
+![user-events.jpg](docs%2Ffiles%2Fuser-events.jpg)
+
+***Kafka UI - movie-events:***
+![movie-events.jpg](docs%2Ffiles%2Fmovie-events.jpg)
+
+***Kafka UI - payment-events:***
+![payment-event.jpg](docs%2Ffiles%2Fpayment-event.jpg)
+
+***Postman тесты:***
+![tests.jpg](docs%2Ffiles%2Ftests.jpg)
+
+
+
+
 
 
 ## Задание 3
@@ -349,7 +478,9 @@ minikube tunnel
 https://cinemaabyss.example.com/api/movies
 и приложите скриншот развертывания helm и вывода https://cinemaabyss.example.com/api/movies
 
-
+### Скриншоты
+![task4.jpg](docs%2Ffiles%2Ftask4.jpg)
+![4-api-movies.jpg](docs%2Ffiles%2F4-api-movies.jpg)
 # Задание 5
 Компания планирует активно развиваться и для повышения надежности, безопасности, реализации сетевых паттернов типа Circuit Breaker и канареечного деплоя вам как архитектору необходимо развернуть istio и настроить circuit breaker для monolith и movies сервисов.
 
@@ -414,6 +545,13 @@ You can see 21 for the upstream_rq_pending_overflow value which means 21 calls s
 ```
 
 Приложите скриншот работы circuit breaker'а
+
+### Скриншоты
+![tasks5.1.jpg](docs%2Ffiles%2Ftasks5.1.jpg)
+![tasks5.2.jpg](docs%2Ffiles%2Ftasks5.2.jpg)
+![tasks5.3.jpg](docs%2Ffiles%2Ftasks5.3.jpg)
+![tasks5.4.jpg](docs%2Ffiles%2Ftasks5.4.jpg)
+
 
 Удаляем все
 ```bash
